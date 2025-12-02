@@ -12,10 +12,8 @@ class ScanDelegate(DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         if isNewDev:
             dev.last = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            #print(f"Discovered new device: {dev.addr}, RSSI: {dev.rssi} dBm")
         elif isNewData:
             dev.last = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            #print(f"Received new data from device: {dev.addr}, RSSI: {dev.rssi} dBm")
 
 def manufacturer_info(value):
     if value[:4] == "0600":
@@ -42,13 +40,12 @@ def main():
     devices_dict = {}
 
     print("BlueS.py is starting BLE scan...")
-    time.sleep(1)
     print("CTRL + C to exit")
     time.sleep(1)
 
     try:
         while True:
-            devices = scanner.scan(3.0) # Scan for 5 seconds
+            devices = scanner.scan(5.0) # Scan for 5 seconds
 
             # Clear the table and update it with new data
             table.clear_rows()
@@ -58,10 +55,10 @@ def main():
                 addr = dev.addr
                 rssi = dev.rssi
                 name = dev.getValueText(9) or 'N/A'
-                company = manufacturer_info(str(dev.getValueText(255))) or 'N/A'
+                company = manufacturer_info(str(dev.getValueText(255) or 'N/A'))
                 last = dev.last
         
-                # if device is already in table, only update RSSI
+                # if device is already in table, update RSSI and Last seen
                 if addr in devices_dict:
                     devices_dict[addr]["RSSI"] = rssi
                     devices_dict[addr]["Last Seen"] = last
@@ -84,8 +81,7 @@ def main():
             # Print the updated table
             clear_and_print(table)
 
-            # Wait for 5 seconds before scanning again
-            time.sleep(1)
+            time.sleep(.1)
     except:
         if out:
             csv_table = table.get_csv_string()
@@ -101,6 +97,7 @@ def check_sudo():
         print("BlueS.py MUST RUN AS ROOT/SUDO")
         sys.exit(0)
 
+# my clusterfuck of a context menu and options
 if __name__ == '__main__':
     check_sudo()
     if len(sys.argv) < 2:
