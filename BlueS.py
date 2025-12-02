@@ -89,7 +89,7 @@ def main():
     except:
         if out:
             csv_table = table.get_csv_string()
-            print("Saving table as CSV...")
+            print("\nSaving table as CSV...")
             with open(out_file, 'w', newline='') as f:
                 f.write(csv_table)
         print("\nExiting...")
