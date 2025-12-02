@@ -15,6 +15,7 @@ class ScanDelegate(DefaultDelegate):
         elif isNewData:
             dev.last = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+# TODO use YAML file to determine device manufacture data instead of hardcoding hex values
 def manufacturer_info(value):
     if value[:4] == "0600":
         return "Microsoft"
@@ -22,6 +23,10 @@ def manufacturer_info(value):
         return "Apple Inc."
     elif value[:4] == "8700":
         return "Garmin International, Inc."
+    elif value[:4] == "7500":
+        return "Samsung Electronics Co. Ltd."
+    elif value[:4] == "e304":
+        return "Under Armour"
     else:
         return value
 
@@ -32,16 +37,25 @@ def clear_and_print(text):
 def main():
     # Create a PrettyTable instance
     table = PrettyTable()
-    table.field_names = ["Device Address", "RSSI (dBm)", "Device Name", "Company", "Last Seen"]
+    table.field_names = ["Device Address", "RSSI (dBm)", "RSSI High", "Device Name", "Company", "Last Seen"]
 
     # Initialize the scanner
-    scanner = Scanner().withDelegate(ScanDelegate())
+    if select_hci == True:
+        try:
+            scanner = Scanner(int(hci[-1])).withDelegate(ScanDelegate())
+        except:
+            print("Error with selected hci interface")
+            print("Example input: 'hci0', 'hci1'")
+            sys.exit()
+    elif select_hci == False:
+        scanner = Scanner().withDelegate(ScanDelegate())
+
 
     devices_dict = {}
 
     print("BlueS.py is starting BLE scan...")
     print("CTRL + C to exit")
-    time.sleep(1)
+    time.sleep(.5)
 
     try:
         while True:
@@ -52,19 +66,35 @@ def main():
 
             for dev in devices:
                 # Get device info
-                addr = dev.addr
+
+                # highlight for hunting on specific mac address
+                if only_mac == True and dev.addr == search_mac:
+                    addr = "\033[31m" + dev.addr + "\033[0m"
+                    tmpname = dev.getValueText(9) or 'N/A'
+                    name = "\033[31m" + tmpname + "\033[0m"
+                    tmpcompany = manufacturer_info(str(dev.getValueText(255))) or 'N/A'
+                    company = "\033[31m" + tmpcompany + "\033[0m"
+
+                else:
+                    addr = dev.addr
+                    name = dev.getValueText(9) or 'N/A'
+                    company = manufacturer_info(str(dev.getValueText(255))) or 'N/A'
+
                 rssi = dev.rssi
-                name = dev.getValueText(9) or 'N/A'
-                company = manufacturer_info(str(dev.getValueText(255) or 'N/A'))
                 last = dev.last
         
-                # if device is already in table, update RSSI and Last seen
+                # if device in dictionary, update RSSI, last seen, and RSSI High
                 if addr in devices_dict:
                     devices_dict[addr]["RSSI"] = rssi
                     devices_dict[addr]["Last Seen"] = last
+                    
+                    # if RSSI high is less than current RSSI, update
+                    if devices_dict[addr]["RSSI High"] < rssi:
+                        devices_dict[addr]["RSSI High"] = rssi
                 else:
                     devices_dict[addr] = {
                         "RSSI": rssi,
+                        "RSSI High": rssi,
                         "Name": name,
                         "Company": company,
                         "Last Seen": last
@@ -72,13 +102,14 @@ def main():
 
             table.clear_rows()
 
+            # based on options provided in command, these if statements will filter results
             for addr, dev_info in devices_dict.items():
-                table.add_row([addr, dev_info["RSSI"], dev_info["Name"], dev_info["Company"], dev_info["Last Seen"]])
+                if only_name == True and dev_info["Name"] != 'N/A' or only_name == False:
+                    if only_company == True and dev_info["Company"] != 'None' or only_company == False:
+                        table.add_row([addr, dev_info["RSSI"], dev_info["RSSI High"], dev_info["Name"], dev_info["Company"], dev_info["Last Seen"]])
 
-            # sort
             table.sortby = "RSSI (dBm)"
 
-            # Print the updated table
             clear_and_print(table)
 
             time.sleep(.1)
@@ -97,33 +128,60 @@ def check_sudo():
         print("BlueS.py MUST RUN AS ROOT/SUDO")
         sys.exit(0)
 
-# my clusterfuck of a context menu and options
 if __name__ == '__main__':
     check_sudo()
+    
+    out = False
+    only_name = False
+    only_company = False
+    only_mac = False
+    select_hci = False
+
     if len(sys.argv) < 2:
-        out = False
         main()
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
-        print("---------------------------------------------")
+        print("---------------------------------------------------")
         print("BlueS.py - Bluetooth Low Eenrgy (BLE) Sniffer")
         print("Author - Cpl Connor Knight")
-        print("---------------------------------------------")
+        print("---------------------------------------------------")
         print("Ensure you have a BLE enabled device, and run")
         print("MUST RUN AS ROOT/SUDO")
-        print("---------------------------------------------")
-        print("-h OR --help     this menu")
-        print("-o <filename>    output as CSV on exit")
-        print("---------------------------------------------")
+        print("The closer RSSI is to 0, the closer you are")
+        print("---------------------------------------------------")
+        print("Example: sudo ./BlueS.py -o output.csv -n -i hci1")
+        print("---------------------------------------------------")
+        print("-h OR --help         this menu")
+        print("-o <filename>        output as CSV on exit")
+        print("-n                   must broadcast name of device")
+        print("-c                   must broadcast device manufacturer data")
+        print("-m <mac_address>     hunt on a specific mac address")
+        print("-i <hci_interface>   specify hci interface to use")
+        print("---------------------------------------------------")
     else:
         args = sys.argv[1:]
-        for arg in args:
+        for i, arg in enumerate(args):
             if arg == "-o":
                 out = True
-                if sys.argv[2]:
-                    out_file = sys.argv[2]
-                    main()
+                if sys.argv[i+2]:
+                    out_file = sys.argv[i+2]
                 else:
                     print("Must give output filename with -o")
                     sys.exit()
-            else:
-                out = False
+            if arg == "-n":
+                only_name = True
+            if arg == "-c":
+                only_company = True
+            if arg == "-m":
+                only_mac = True
+                if sys.argv[i+2]:
+                    search_mac = sys.argv[i+2]
+                else:
+                    print("Must give mac address to search for")
+                    sys.exit()
+            if arg == "-i":
+                if sys.argv[i+2]:
+                    hci = sys.argv[i+2]
+                else:
+                    print("Must specify hci interface to use")
+                    sys.exit()
+        main()
