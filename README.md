@@ -1,14 +1,14 @@
 # BlueS.py
-BlueS.py - Bluetooth Low Energy (BLE) Sniffer
+BlueS.py - Bluetooth Low Energy (BLE) Sniffer<br>
 
-Displays MAC Address, RSSI, Device Name, Company, and Last Seen Time in one simple table
-Ability to save table as CSV for later analysis and viewing
+Displays MAC Address, RSSI, Device Name, Company, and Last Seen Time in one simple table<br>
+Ability to save table as CSV for later analysis and viewing<br>
 
 ## Steps
-Step 1 - Connect Alfa Card (or alternative BLE adapter)
-Step 2 - Use 'iwconfig' (on linux) to ensure your device is detecting your wireless card
-Step 3 - Run
+Step 1 - Connect Alfa Card (or alternative BLE adapter)<br>
+Step 2 - Use 'iwconfig' (on linux) to ensure your device is detecting your wireless card<br>
+Step 3 - Run<br>
 
-Options:
--h OR --help       Help menu
--o <filename>      Save output as CSV when exiting
+Options:<br>
+-h OR --help       Help menu<br>
+-o <filename>      Save output as CSV when exiting<br>
