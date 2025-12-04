@@ -5,6 +5,8 @@ from prettytable import PrettyTable
 from datetime import datetime
 import time, sys, csv, os
 
+ORANGE = '\033[33m'
+RED = '\033[31m'
 RESET = '\033[0m'
 
 class ScanDelegate(DefaultDelegate):
@@ -43,12 +45,7 @@ def main():
 
     # Initialize the scanner
     if select_hci == True:
-        try:
-            scanner = Scanner(int(hci[-1])).withDelegate(ScanDelegate())
-        except:
-            print("Error with selected hci interface")
-            print("Example input: 'hci0', 'hci1'")
-            sys.exit()
+        scanner = Scanner(int(hci[-1])).withDelegate(ScanDelegate())
     elif select_hci == False:
         scanner = Scanner().withDelegate(ScanDelegate())
 
@@ -68,12 +65,18 @@ def main():
             # Clear the table and update it with new data
             table.clear_rows()
 
+            # make time orange if not recently updated
+            mac_list = [dev.addr for dev in devices]
+            for addr in list(devices_dict.keys()):
+                if addr not in mac_list:
+                    devices_dict[addr]["Last Seen"] = RESET + ORANGE + dev.last + RESET
+
             for dev in devices:
                 # Get device info
 
                 # highlight for hunting on specific mac address
                 if only_mac == True and dev.addr == search_mac:
-                    addr = "\033[31m" + dev.addr
+                    addr = RED + dev.addr
                     last = dev.last + RESET
 
                 else:
@@ -117,7 +120,7 @@ def main():
     except:
         os.system('clear')
         if out:
-            csv_table = table.get_csv_string()
+            csv_table = table.get_csv_string().replace(RED, '').replace(ORANGE, '').replace(RESET, '')
             print("\nSaving table as CSV...")
             with open(out_file, 'w', newline='') as f:
                 f.write(csv_table)
@@ -194,4 +197,4 @@ if __name__ == '__main__':
                         sys.exit()
             main()
         except:
-            print("error happen")
+            print("Error happen with options")
