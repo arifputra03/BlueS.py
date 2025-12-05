@@ -22,8 +22,8 @@ Step 4 - Run as sudo/root<br>
 ## Dependencies
 Run these commands in your linux environment<br>
 ```
-sudo apt-get install build-essential libglib2.0-dev python3 pip python3-dev<br><br>
-pip install bluepy prettytable<br>
+sudo apt-get install build-essential libglib2.0-dev python3 pip python3-dev
+pip install bluepy prettytable
 ```
 
 ![Screenshot of BlueS.py running](/BlueSpy0.png)
